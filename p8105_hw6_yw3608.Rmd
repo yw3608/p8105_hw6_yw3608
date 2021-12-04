@@ -8,6 +8,10 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(mgcv)
+library(modelr)
+
+
 ```
 
 
@@ -36,7 +40,90 @@ bw_clean =
     mother_race = recode(mother_race, "1" = "white", "2" = "black", "3" = "asian", "4" = "puertorican", "8" =   "other")
     ) 
  
-head(bw_clean ) %>% 
+head(bw_clean) %>% 
 knitr::kable()
+```
+
+
+
+**regression model**
+```{r}
+ model1 = lm(bwt ~ wtgain * ppwt, data = bw_clean)
+  summary(model1) %>% 
+  broom::tidy()
+  
+  
+  
+  bw_df %>% 
+  modelr::add_predictions(model1) %>%
+  modelr::add_residuals(model1) %>%
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.6) 
+```
+
+**prepare the other two required models**
+```{r}
+model2 = lm(bwt ~ blength + gaweeks, data = bw_clean)
+model3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = bw_clean)
+
+summary(model2) %>% 
+  broom::tidy()
+
+summary(model3) %>% 
+  broom::tidy()
+```
+
+
+
+Compare the model to two other models:
+model2:length at birth and gestational age as predictors (main effects only)
+model3:head circumference, length, sex, and all interactions (including the three-way interaction) between these
+```{r}
+  cvpe_df = 
+  crossv_mc(bw_clean, 100) %>% 
+   mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  ) %>% 
+  mutate(
+    model1 = map(train, ~ lm(bwt~ wtgain * ppwt, data =.x )),
+    model2 = map(train, ~ lm(bwt ~ blength + gaweeks, data = .x)),
+    model3 = map(train, ~ lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex +       blength*babysex + bhead*blength*babysex, data = .x))) %>%
+  
+  mutate(
+    rmse_model1 = map2_dbl(model1, test, ~rmse(model = .x, data = .y)),
+    rmse_model2 = map2_dbl(model2, test, ~rmse(model = .x, data = .y)),
+    rmse_model3 = map2_dbl(model3, test, ~rmse(model = .x, data = .y)))
+
+cvpe_df %>% 
+  select(starts_with('rmse')) %>% 
+  pivot_longer(
+    rmse_model1:rmse_model3,
+    names_to = 'model',
+    values_to = 'rmse', 
+    names_prefix = 'rmse_'
+  ) %>% 
+  ggplot(aes(x = model, y = rmse)) +
+   geom_boxplot()
+
+
+```
+
+
+
+
+# Pproblem2**
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
 ```
 
