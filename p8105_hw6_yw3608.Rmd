@@ -21,7 +21,7 @@ bw_df =
 ```
 
 
-**clean data, mutate several variables to factors,change level's name and show the data**
+**Clean data, mutate several variables to factors,change level's name and show the data**
 ```{r}
 bw_clean = 
   bw_df %>% 
@@ -44,11 +44,12 @@ knitr::kable()
 
 
 
-**regression model**
+**Regression Model**
 ```{r}
  model1 = lm(bwt ~ wtgain * delwt, data = bw_clean)
   summary(model1) %>% 
-  broom::tidy()
+  broom::tidy() %>% 
+  knitr::kable()
   
   
   bw_df %>% 
@@ -59,23 +60,34 @@ knitr::kable()
 
 ```
 
-**prepare the other two required models**
+**Notice: the p values here are too small to be shown on the table, thus all the p values shown in knitr::kable are 0**
+
+
+
+
+**Prepare the other two required models**
 ```{r}
 model2 = lm(bwt ~ blength + gaweeks, data = bw_clean)
 model3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = bw_clean)
 
+summod2 =
 summary(model2) %>% 
-  broom::tidy()
+  broom::tidy() %>% 
+knitr::kable()
+summod2
 
+summod3 =
 summary(model3) %>% 
-  broom::tidy()
+  broom::tidy() %>% 
+knitr::kable()
+summod3
 ```
 
+**Notice: the p values here are too small to be shown on the table, thus all the p values shown in knitr::kable are 0**
 
 
-Compare the model to two other models:
-model2:length at birth and gestational age as predictors (main effects only)
-model3:head circumference, length, sex, and all interactions (including the three-way interaction) between these
+
+**Compare the model to two other models**
 ```{r}
   cvpe_df = 
   crossv_mc(bw_clean, 100) %>% 
@@ -104,7 +116,9 @@ cvpe_df %>%
   ggplot(aes(x = model, y = rmse)) +
    geom_boxplot()
 ```
-**According to the plot, the best model is model 3.
+
+**According to the plot, the best model is model 3**
+
 
 
 # Problem2
@@ -122,7 +136,8 @@ weather_df =
   select(name, id, everything())
 ```
 
-**bootstrap and calculate r^2, ci and plot**
+
+**Bootstrap and calculate r^2, ci and plot**
 ```{r}
 bootstrap_df_r2 = 
   weather_df %>%
@@ -150,7 +165,13 @@ r_2_plot =
 r_2_plot
 ```
 
-**bootstrap and calculate log(β̂ 0∗β̂ 1), ci and plot**
+**According to the plot, r^2 is normal distributed.**
+
+
+
+
+
+**Bootstrap and calculate log(β̂ 0∗β̂ 1), ci and plot**
 ```{r}
 bootstrap_df_log = 
   weather_df %>%
@@ -194,3 +215,4 @@ log %>%
 log_plot
 ```
 
+**From the plot, I can conclude that the log(β̂ 0∗β̂  1)  approaches normal distribution**
