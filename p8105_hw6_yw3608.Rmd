@@ -16,7 +16,7 @@ library(modelr)
 **Prepare data,and check if missing data exist and drop na**
 ```{r,warning=FALSE,message = FALSE}
 bw_df = 
-  read_csv('./data/birthweight.csv') %>% 
+  read_csv("./data/birthweight.csv") %>%
   drop_na()
 ```
 
@@ -28,39 +28,39 @@ bw_clean =
   mutate(
     babysex = as.factor(babysex),
     father_race = as.factor(frace),
-    malform = as.factor(malform),
-    mother_race = as.factor(mrace)
+    mother_race = as.factor(mrace),
+    malform = as.factor(malform)
   )  %>%
   mutate(
     babysex = recode(babysex, "1" = "male", "2" = "female"),
     father_race = recode(father_race, "1" = "white", "2" = "black", "3" = "asian", "4" = "puertorican", "8" = "other", "9" = "unknown"), 
-    malform = recode(malform, "0" = "absense", "1" = "present"),
-    mother_race = recode(mother_race, "1" = "white", "2" = "black", "3" = "asian", "4" = "puertorican", "8" =   "other")
+    mother_race = recode(mother_race, "1" = "white", "2" = "black", "3" = "asian", "4" = "puertorican", "8" =   "other"),
+    malform = recode(malform, "0" = "absense", "1" = "present")
     ) 
  
-head(bw_clean) %>% 
-knitr::kable()
+head(bw_clean,4) %>% 
+knitr::kable(digits = 3)
 ```
 
 
 
 **Regression Model**
 ```{r}
- model1 = lm(bwt ~ wtgain * delwt, data = bw_clean)
+ model1 = lm(bwt ~ wtgain + delwt, data = bw_clean)
   summary(model1) %>% 
   broom::tidy() %>% 
-  knitr::kable()
+  knitr::kable(digits = 20)
   
-  
-  bw_df %>% 
+  bw_clean %>% 
   modelr::add_predictions(model1) %>%
   modelr::add_residuals(model1) %>%
-  ggplot(aes(x = pred, y = resid)) +
+  ggplot(aes(x = resid, y = pred)) +
   geom_point(alpha = 0.6) 
-
 ```
 
-**Notice: the p values here are too small to be shown on the table, thus all the p values shown in knitr::kable are 0**
+
+**Here, i construct a model and set baby’s birth weight as y, and let it depend on the mother’s weight at delivery (pounds) and mother’s weight gain during pregnancy (pounds). Next, show a plot of model residuals against fitted values.** 
+**Notice: Some the p values here are too small to be shown on the table, thus all the p values shown in knitr::kable are 0**
 
 
 
@@ -73,13 +73,13 @@ model3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + bl
 summod2 =
 summary(model2) %>% 
   broom::tidy() %>% 
-knitr::kable()
+knitr::kable(digits = 20)
 summod2
 
 summod3 =
 summary(model3) %>% 
   broom::tidy() %>% 
-knitr::kable()
+knitr::kable(digits = 20)
 summod3
 ```
 
@@ -87,7 +87,7 @@ summod3
 
 
 
-**Compare the model to two other models**
+**Compare the model to two other models, refers to the example of p8105 course page example**
 ```{r}
   cvpe_df = 
   crossv_mc(bw_clean, 100) %>% 
@@ -96,10 +96,9 @@ summod3
     test = map(test, as_tibble)
   ) %>% 
   mutate(
-    model1 = map(train, ~ lm(bwt~ wtgain * delwt, data =.x )),
+    model1 = map(train, ~ lm(bwt~ wtgain + delwt, data =.x )),
     model2 = map(train, ~ lm(bwt ~ blength + gaweeks, data = .x)),
     model3 = map(train, ~ lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex +       blength*babysex + bhead*blength*babysex, data = .x))) %>%
-  
   mutate(
     rmse_model1 = map2_dbl(model1, test, ~rmse(model = .x, data = .y)),
     rmse_model2 = map2_dbl(model2, test, ~rmse(model = .x, data = .y)),
@@ -114,7 +113,7 @@ cvpe_df %>%
     names_prefix = 'rmse_'
   ) %>% 
   ggplot(aes(x = model, y = rmse)) +
-   geom_boxplot()
+  geom_boxplot()
 ```
 
 **According to the plot, the best model is model 3**
@@ -122,7 +121,7 @@ cvpe_df %>%
 
 
 # Problem2
-```{r,message=FALSE, warning=FALSE}
+```{r,message = FALSE, warning = FALSE}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -143,7 +142,7 @@ bootstrap_df_r2 =
   weather_df %>%
   bootstrap(n = 5000, id = "bootstrap")%>%
  mutate(
-    fit =map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
+    fit = map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
     result = map(fit, broom::glance)
     ) %>%
   select(bootstrap,result)%>%
