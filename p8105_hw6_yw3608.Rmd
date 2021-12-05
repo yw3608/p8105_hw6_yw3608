@@ -10,15 +10,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mgcv)
 library(modelr)
-
-
 ```
 
 
 **Prepare data,and check if missing data exist and drop na**
 ```{r,warning=FALSE,message = FALSE}
 bw_df = 
-  read_csv('data/birthweight.csv') %>% 
+  read_csv('./data/birthweight.csv') %>% 
   drop_na()
 ```
 
@@ -48,10 +46,9 @@ knitr::kable()
 
 **regression model**
 ```{r}
- model1 = lm(bwt ~ wtgain * ppwt, data = bw_clean)
+ model1 = lm(bwt ~ wtgain * delwt, data = bw_clean)
   summary(model1) %>% 
   broom::tidy()
-  
   
   
   bw_df %>% 
@@ -59,6 +56,7 @@ knitr::kable()
   modelr::add_residuals(model1) %>%
   ggplot(aes(x = pred, y = resid)) +
   geom_point(alpha = 0.6) 
+
 ```
 
 **prepare the other two required models**
@@ -86,7 +84,7 @@ model3:head circumference, length, sex, and all interactions (including the thre
     test = map(test, as_tibble)
   ) %>% 
   mutate(
-    model1 = map(train, ~ lm(bwt~ wtgain * ppwt, data =.x )),
+    model1 = map(train, ~ lm(bwt~ wtgain * delwt, data =.x )),
     model2 = map(train, ~ lm(bwt ~ blength + gaweeks, data = .x)),
     model3 = map(train, ~ lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex +       blength*babysex + bhead*blength*babysex, data = .x))) %>%
   
@@ -105,15 +103,12 @@ cvpe_df %>%
   ) %>% 
   ggplot(aes(x = model, y = rmse)) +
    geom_boxplot()
-
-
 ```
+**According to the plot, the best model is model 3.
 
 
-
-
-# Pproblem2**
-```{r}
+# Problem2
+```{r,message=FALSE, warning=FALSE}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -125,5 +120,77 @@ weather_df =
     tmin = tmin / 10,
     tmax = tmax / 10) %>%
   select(name, id, everything())
+```
+
+**bootstrap and calculate r^2, ci and plot**
+```{r}
+bootstrap_df_r2 = 
+  weather_df %>%
+  bootstrap(n = 5000, id = "bootstrap")%>%
+ mutate(
+    fit =map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
+    result = map(fit, broom::glance)
+    ) %>%
+  select(bootstrap,result)%>%
+  unnest(result)
+
+
+r_2_CI =
+  bootstrap_df_r2 %>% 
+  summarize(
+  lower_bound = quantile(adj.r.squared, 0.025), 
+  upper_bound = quantile(adj.r.squared, 0.975)) %>% 
+  knitr::kable() 
+r_2_CI   
+   
+r_2_plot =
+  bootstrap_df_r2 %>% 
+  ggplot(aes(x = r.squared)) +
+  geom_density() 
+r_2_plot
+```
+
+**bootstrap and calculate log(β̂ 0∗β̂ 1), ci and plot**
+```{r}
+bootstrap_df_log = 
+  weather_df %>%
+  bootstrap(n = 5000, id = "bootstrap")%>%
+ mutate(
+    fit =map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
+    result2 = map(fit, broom::tidy)
+    ) %>%
+  select(bootstrap,result2)%>%
+  unnest(result2)
+
+
+log =
+  bootstrap_df_log %>% 
+  select(bootstrap, term, estimate) %>% 
+  pivot_wider(
+    names_from = term,
+    values_from = estimate) %>% 
+  select(intercept ="(Intercept)",tmin) %>% 
+  mutate(log = log(intercept*tmin)) 
+  
+log_showresult =
+  head(log,10) %>%
+  select(log) %>% 
+  knitr::kable() 
+log_showresult
+
+log_CI =
+log %>% 
+  summarize(
+    lower_bound = quantile(log, 0.025),
+    upper_bound = quantile(log, 0.975)
+  ) %>% 
+  knitr::kable()
+log_CI
+
+log_plot = 
+log %>% 
+  ggplot(aes(x = log)) +
+  geom_density() 
+log_plot
 ```
 
