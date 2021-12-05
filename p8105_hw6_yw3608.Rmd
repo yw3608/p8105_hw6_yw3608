@@ -14,7 +14,7 @@ library(modelr)
 
 
 **Prepare data,and check if missing data exist and drop na**
-```{r,warning=FALSE,message = FALSE}
+```{r,warning = FALSE,message = FALSE}
 bw_df = 
   read_csv("./data/birthweight.csv") %>%
   drop_na()
@@ -145,7 +145,7 @@ bootstrap_df_r2 =
     fit = map(.x = strap, ~lm(tmax ~ tmin, data = .x)),
     result = map(fit, broom::glance)
     ) %>%
-  select(bootstrap,result)%>%
+  select(bootstrap,result) %>%
   unnest(result)
 
 
@@ -164,6 +164,7 @@ r_2_plot =
 r_2_plot
 ```
 
+**The CI is (0.8929272 , 0.9268548)**
 **According to the plot, r^2 is normal distributed.**
 
 
@@ -189,8 +190,8 @@ log =
   pivot_wider(
     names_from = term,
     values_from = estimate) %>% 
-  select(intercept ="(Intercept)",tmin) %>% 
-  mutate(log = log(intercept*tmin)) 
+  select(intercept ="(Intercept)", tmin) %>% 
+  mutate(log = log(intercept * tmin)) 
   
 log_showresult =
   head(log,10) %>%
@@ -214,4 +215,5 @@ log %>%
 log_plot
 ```
 
+**The CI is (1.965563,2.057716)**
 **From the plot, I can conclude that the log(β̂ 0∗β̂  1)  approaches normal distribution**
